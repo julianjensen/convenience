@@ -1,0 +1,30 @@
+{
+  "name": "convenience",
+  "version": "1.1.0",
+  "description": "A mix of unrelated utility functions, everything but the kitchen-sink, maybe including the kitchen-sink, acutally. Possibly.",
+  "main": "index.js",
+  "scripts": {
+    "test": "istanbul cover node_modules/mocha/bin/_mocha -- ./test/",
+    "coveralls": "istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
+    "codacy": "istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/.bin/codacy-coverage && rm -rf ./coverage"
+  },
+  "author": {
+    "name": "Julian Jensen",
+    "email": "jjdanois@gmail.com"
+  },
+  "repository": "https://github.com/julianjensen/convenience.git",
+  "license": "MIT",
+  "dependencies": {
+    "bson-objectid": "^1.1.5",
+    "execa": "^0.7.0",
+    "gmail-send": "^1.2.11"
+  },
+  "devDependencies": {
+    "chai": "^4.1.0",
+    "codacy-coverage": "^2.0.2",
+    "coveralls": "^2.13.1",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.4.2",
+    "mocha-lcov-reporter": "^1.3.0"
+  }
+}
