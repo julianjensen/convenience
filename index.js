@@ -8,8 +8,6 @@
 
 let _debug = true;
 
-_inspect.defaultOptions = { depth: 4, colors: true };
-
 const
     util = require( 'util' ),
     ObjectId = require( 'bson-objectid' ),
@@ -132,10 +130,17 @@ const
         if ( prop( o, name ) )
             throw new Error( `Property "${name}" already exists on object: ` + JSON.stringify( Object.getOwnPropertyDescriptor( name ) ) );
 
-        Object.defineProperty( o, name,
-                               !s && object( g )
-                                   ? g
-                                   : { enumerable: false, ...( func( g ) ? { get: g } : {} ), ...( func( s ) ? { set: s } : {} ), ...( !func( s ) && !func( g ) ? { value: g } : {} ) } );
+        if ( !s && object( g ) )
+            __def( o, name, g );
+        else
+        {
+            const _desc = { enumerable: false };
+            if ( func( g ) ) _desc.get = g;
+            if ( func( s ) ) _desc.set = s;
+            if ( !func( g ) && !func( s ) ) _desc.value = g;
+
+            __def( o, name, _desc );
+        }
 
         return o;
     },
@@ -239,6 +244,8 @@ const
      * @return {?Array<*>}
      */
     safeArray = v => !exists( v ) ? [] : array( v ) ? v : [ v ];
+
+_inspect.defaultOptions = { depth: 4, colors: true };
 
 let before = '', after = ' ';
 
