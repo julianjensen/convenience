@@ -86,14 +86,14 @@ const
      * @param {Object} o
      * @return {Array<String>}
      */
-    keys = o => __keys.call( o ),
+    keys = o => __keys( o ),
 
     /**
      * Shorthand for `Object.entries()`
      * @param {Object} o
      * @return {Array<Array<*, *>>}
      */
-    entries = o => __entries.call( o ),
+    entries = o => __entries( o ),
 
     /**
      * Shorthand for `Object.hasOwnProperty()`
@@ -660,7 +660,7 @@ function gmail( opts )
  */
 function omit( s, ..._keys )
 {
-    const xfer = obj => keys( obj ).reduce( ( d, k ) => !_keys.includes( k ) && _set( d, k, obj[ k ] ), {} );
+    const xfer = obj => keys( obj ).reduce( ( d, k ) => _keys.includes( k ) ? d : _set( d, k, obj[ k ] ), {} );
 
     return array( s ) ? s.map( xfer ) : object( s ) ? xfer( s ) : {};
 }
