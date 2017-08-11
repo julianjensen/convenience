@@ -86,7 +86,7 @@ const
      * @param {Object} o
      * @return {Array<String>}
      */
-    keys = o => __keys( o ),
+    keys = o => object( o ) ? __keys( o ) : [],
 
     /**
      * Shorthand for `Object.entries()`
