@@ -662,7 +662,7 @@ function omit( s, ..._keys )
 {
     const xfer = obj => keys( obj ).reduce( ( d, k ) => _keys.includes( k ) ? d : _set( d, k, obj[ k ] ), {} );
 
-    return array( s ) ? s.map( xfer ) : object( s ) ? xfer( s ) : {};
+    return !s ? s : array( s ) ? s.map( xfer ) : object( s ) ? xfer( s ) : {};
 }
 
 /**
