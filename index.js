@@ -1,5 +1,7 @@
 /** ****************************************************************************************************
  * File: kitchen-sink
+ * qpwoeiru
+ * Marimuthu Madasamy / Senior Software Engineer / Lab49 / M: +1 201-965-9202 / marimuthu.madasamy@lab49.com
  * Project: module
  * @author Julian Jensen <jjdanois@gmail.com> on 12/28/2016
  *******************************************************************************************************/
@@ -17,7 +19,7 @@ const
     chars = require( './lib/chars' ),
     pm2 = require( './lib/pm2' ),
     Timer = require( './lib/timer' ),
-
+    { create } = Object,
     _set = ( o, k, v ) => { o[ k ] = v; return o; },
 
     getset = o => o.hasOwnProperty( 'get' ) || o.hasOwnProperty( 'set' ),
@@ -192,7 +194,7 @@ const
      * @param {String} str
      * @param {Number} [n=1]
      */
-    uc = ( str, n = 1 ) => n === 1 ? ( str[ 0 ].toUpperCase() + str.substr( 1 ).toLowerCase() ) : ( str.substr( 0, n ).toUpperCase() + str.substr( n ).toLowerCase() ),
+    uc = ( str, n = 1 ) => n === 1 ? str[ 0 ].toUpperCase() + str.substr( 1 ).toLowerCase() : str.substr( 0, n ).toUpperCase() + str.substr( n ).toLowerCase(),
 
     /**
      * A tiny MongoDB helper. Checks if `so` is an `ObjectId`.
@@ -247,7 +249,8 @@ const
 
 _inspect.defaultOptions = { depth: 4, colors: true };
 
-let before = '', after = ' ';
+let before = '', after = ' ',
+    fastProto = null;
 
 /**
  * @param {String} n
@@ -255,7 +258,7 @@ let before = '', after = ' ';
  */
 const
     isNumber = n => /^[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?$/.test( n ),
-    ensureArray        = a => Array.isArray( a ) ? a : [ a ],
+    ensureArray        = a => array( a ) ? a : [ a ],
     noPerms            = a => !array( a ) || !a.some( el => array( el ) ),
     concat             = ( a1, a2 ) => ensureArray( a1 ).concat( a2 );
 
@@ -655,7 +658,7 @@ function gmail( opts )
  * Like `lodash`
  *
  * @param {Object|Array<Object>} s
- * @param {string[]} keys
+ * @param {string[]} _keys
  * @return {Object|Array<Object>}
  */
 function omit( s, ..._keys )
@@ -824,6 +827,33 @@ function _try( fn )
     }
 }
 
+/**
+ * @returns {Object}
+ * @constructor
+ */
+function NullObject()
+{
+    return create( null );
+}
+
+/**
+ * @returns {Object}
+ * @constructor
+ */
+function FastProps()
+{
+    if ( fastProto && typeof fastProto.property )
+    {
+        const result = fastProto;
+        fastProto = FastProps.prototype = null;
+        return result;
+    }
+
+    fastProto = FastProps.prototype = new NullObject();
+
+    return new FastProps();
+}
+
 // noinspection CommaExpressionJS
 module.exports = {
     mapper, reducer, filter, looper, splitOn,
@@ -833,6 +863,8 @@ module.exports = {
     entries,
     prop,
 
+    fast_props: FastProps,
+    null_object: NullObject,
     pluck,
     iterable,
     safe_json,
