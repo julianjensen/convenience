@@ -41,6 +41,17 @@ const
      */
     /** */
     { isArray: array } = Array,
+    isA = new Proxy( {
+        object: o => typeof o === 'object' && !Array.isArray( o ) && o !== null,
+        array: a => Array.isArray( a ),
+        define: function( type, func ) {
+            this[ type ] = func
+        }
+    }, { get: ( target, name ) => {
+        if( target[ name ] ) return ( subject, def ) => target[ name ]( subject, def );
+        return subject => typeof subject === name
+    } } ),
+
     /**
      * @function string
      * @param {*} str
@@ -911,5 +922,6 @@ module.exports = {
     // eslint-disable-next-line no-eval
     global: global || ( 1, eval )( 'this' ),
     promisify,
-    permutations
+    permutations,
+    isA
 };
