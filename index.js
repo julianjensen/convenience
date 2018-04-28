@@ -865,6 +865,26 @@ function FastProps()
     return new FastProps();
 }
 
+/**
+ * Use as a tag function for a tagged string template literal. It will find the smallest indent and remove that from every line.
+ * In other words, you can now tab your multi-line template string to where they look nice but they'll still come nice and correct
+ * when printed.
+ *
+* @param {Array<string>} strings
+* @param {*[]} stuffAndThings
+* @return {string}
+ */
+function strip( strings, ...stuffAndThings )
+{
+    const
+        finalStr = strings.reduce( ( soFar, str, i ) => soFar + stuffAndThings[ i ] + str ),
+        match  = finalStr.match( /^[^\S\n]*(?=\S)/gm ),
+        indent = match && match.reduce( ( minLng, m ) => m.length < minLng ? m.length : minLng, Infinity );
+
+    return !indent || indent === Infinity ? finalStr : finalStr.replace( new RegExp( `^.{${indent}}`, 'gm' ), '' );
+}
+
+
 // noinspection CommaExpressionJS
 module.exports = {
     mapper, reducer, filter, looper, splitOn,
