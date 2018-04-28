@@ -1,37 +1,42 @@
-/** ****************************************************************************************************
- * File: kitchen-sink
- * qpwoeiru
- * Marimuthu Madasamy / Senior Software Engineer / Lab49 / M: +1 201-965-9202 / marimuthu.madasamy@lab49.com
- * Project: module
- * @author Julian Jensen <jjdanois@gmail.com> on 12/28/2016
- *******************************************************************************************************/
 'use strict';
 // @formatter:off
 
 let _debug = true;
 
 const
-    util = require( 'util' ),
-    ObjectId = require( 'bson-objectid' ),
-    gmailSend = require( 'gmail-send' ),
+    NODE             = !!process && typeof process.version === 'string',
+    util             = NODE ? require( 'util' ) : {},
+    ObjectId         = require( 'bson-objectid' ),
+    gmailSend        = require( 'gmail-send' ),
     LARGE_ARRAY_SIZE = 200,
-    execa = require( 'execa' ),
-    chars = require( './lib/chars' ),
-    pm2 = require( './lib/pm2' ),
-    Timer = require( './lib/timer' ),
-    { create } = Object,
-    _set = ( o, k, v ) => { o[ k ] = v; return o; },
+    execa            = require( 'execa' ),
+    chars            = require( './lib/chars' ),
+    pm2              = require( './lib/pm2' ),
+    Timer            = require( './lib/timer' ),
+    { create }       = Object,
+    _set             = ( o, k, v ) => {
+        o[ k ] = v;
+        return o;
+    },
 
-    getset = o => o.hasOwnProperty( 'get' ) || o.hasOwnProperty( 'set' ),
+    getset           = o => o.hasOwnProperty( 'get' ) || o.hasOwnProperty( 'set' ),
 
 
-    oproto = Object.prototype,
+    oproto           = Object.prototype,
 
-    { hasOwnProperty: __has, toString } = oproto,
-    { entries: __entries, keys: __keys, defineProperty: __def } = Object,
+    {
+        hasOwnProperty: __has,
+        toString
+    }                = oproto,
 
-    promisify = util.promisify.bind( util ),
-    _inspect = util.inspect,
+    {
+        entries:        __entries,
+        keys:           __keys,
+        defineProperty: __def
+    }                = Object,
+
+    promisify        = NODE ? util.promisify.bind( util ) : x => x,
+    _inspect         = NODE ? util.inspect : x => JSON.stringify( x ),
 
     /**
      * Cleaner looking type checking
@@ -40,73 +45,77 @@ const
      * @returns {Boolean}
      */
     /** */
-    { isArray: array } = Array,
-    isA = new Proxy( {
-        object: o => typeof o === 'object' && !Array.isArray( o ) && o !== null,
-        array: a => Array.isArray( a ),
-        define: function( type, func ) {
-            this[ type ] = func
-        }
-    }, { get: ( target, name ) => {
-        if( target[ name ] ) return ( subject, def ) => target[ name ]( subject, def );
-        return subject => typeof subject === name
-    } } ),
+    {
+        isArray: array
+    }                = Array,
+
+    isA              = new Proxy( {
+            object: o => typeof o === 'object' && !Array.isArray( o ) && o !== null,
+            array:  a => Array.isArray( a ),
+            define( type, func )
+            {
+                this[ type ] = func;
+            }
+        },
+        {
+            get: ( target, name ) => target[ name ] ? ( subject, def ) => target[ name ]( subject, def ) : subject => typeof subject === name
+        } ),
 
     /**
      * @function string
      * @param {*} str
      * @returns {Boolean}
      */
-    string = str => typeof str === 'string',
+    string           = str => typeof str === 'string',
     /**
      * Checks if argument is an object. Note that an array will return `false`.
      *
      * @param {*} o
      * @returns {Boolean}
      */
-    object = o => typeof o === 'object' && !array( o ) && o !== null,
+    object           = o => typeof o === 'object' && !array( o ) && o !== null,
     /**
      * Checks for `typeof f === 'function'`
      * @param {*} f
      */
-    func = f => typeof f === 'function',
+    func             = f => typeof f === 'function',
     /**
      * Checks for boolean type.
      * @param {*} b
      * @return {Boolean}
      */
-    bool = b => typeof b === 'boolean',
+    bool             = b => typeof b === 'boolean',
     /**
      * Checks for number type.
      * @param {*} n
      * @return {Boolean}
      */
-    number = n => typeof n === 'number',
+    number           = n => typeof n === 'number',
     /**
      * Checks for `undefined`.
      * @param {*} u
      * @return {Boolean}
      */
-    undef = u => typeof u === 'undefined',
+    undef            = u => typeof u === 'undefined',
     /**
      * Checks for empty, meaning return `true` if `null` or `undefined`, also `true` zero-length array and for `Object` without own properties.
      * @param {*} o
      * @return {Boolean}
      */
-    empty = o => !o || ( array( o ) ? !o.length : !__keys( o ).length ),
+    empty            = o => !o || ( array( o ) ? !o.length : !__keys( o ).length ),
     /**
      * Shorthand for `Object.keys()`
      * @param {Object} o
      * @return {Array<String>}
      */
-    keys = o => object( o ) ? __keys( o ) : [],
+    keys             = o => object( o ) ? __keys( o ) : [],
 
     /**
      * Shorthand for `Object.entries()`
      * @param {Object} o
      * @return {Array<Array<*, *>>}
      */
-    entries = o => __entries( o ),
+    entries          = o => __entries( o ),
 
     /**
      * Shorthand for `Object.hasOwnProperty()`
@@ -114,7 +123,7 @@ const
      * @param {String} f
      * @return {Boolean}
      */
-    prop = ( o, f ) => __has.call( o, f ),
+    prop             = ( o, f ) => __has.call( o, f ),
 
     /**
      * Defines a property on an object. Shorthand for `Object.defineProperty()`. `enumerable` defaults to `false`.
@@ -124,7 +133,7 @@ const
      * @param {Object} [prop={ writable: true, configurable: true, enumerable: false, value: * }]
      * @return {Object}
      */
-    define = ( o, name, value, prop ) => {
+    define           = ( o, name, value, prop ) => {
         prop = prop ? Object.assign( { writable: true, configurable: true, enumerable: false, value }, prop ) : { writable: true, configurable: true, enumerable: false, value };
 
         return __def( o, name, prop );
@@ -138,10 +147,10 @@ const
      * @param {?function} [s=null]
      * @return {*}
      */
-    accessor = ( o, name, g, s = null ) => {
+    accessor         = ( o, name, g, s = null ) => {
 
         if ( prop( o, name ) )
-            throw new Error( `Property "${name}" already exists on object: ` + JSON.stringify( Object.getOwnPropertyDescriptor( name ) ) );
+            throw new Error( `Property "${name}" already exists on object: ` + JSON.stringify( Object.getOwnPropertyDescriptor( o, name ) ) );
 
         if ( !s && object( g ) )
             __def( o, name, g );
@@ -164,36 +173,36 @@ const
      * @param o
      * @param meth
      */
-    pairs = ( o, meth ) => func( meth ) ? Array.from( entries( o ) ).forEach( meth ) : Array.from( entries( o ) ),
+    pairs            = ( o, meth ) => func( meth ) ? Array.from( entries( o ) ).forEach( meth ) : Array.from( entries( o ) ),
 
     /**
      * Is object iterable?
      * @param {Object} a
      * @return {Boolean}
      */
-    iterable = a => ( object( a ) || func( a ) ) && func( a[ Symbol.iterator ] ),
+    iterable         = a => ( object( a ) || func( a ) ) && func( a[ Symbol.iterator ] ),
 
     /**
      * Similar to `lodash`'s `each()` function, so, value first, then key.
      * @param {Object|Array<*>} o
      * @param {function} f
      */
-    each = ( o, f ) => {
-        if ( object( o ) )              keys( o ).forEach( k => f( o[ k ], k, o ) );
-        else if ( func( o.forEach ) )   o.forEach( f );
-        else if ( iterable( o ) )       for ( const item of o ) f( item, o );
+    each             = ( o, f ) => {
+        if ( object( o ) ) keys( o ).forEach( k => f( o[ k ], k, o ) );
+        else if ( func( o.forEach ) ) o.forEach( f );
+        else if ( iterable( o ) ) for ( const item of o ) f( item, o );
     },
 
     /**
      * If `obj` is a `String` then does `indexOf` on `what`, if it's an `Array` then it does `includes()` and if it is
      * an `Object`, it does `hasOwnProperty()`.
-     * @param {String|Array<*>|Object} obj
+     * @param {String|Array<*>|Object|Map|Set} obj
      * @param {*} what
      * @return {boolean}
      */
-    has = ( obj, what ) => {
-        if ( string( obj ) )      return obj.indexOf( what ) !== -1;
-        else if ( array( obj ) )  return obj.includes( what );
+    has              = ( obj, what ) => {
+        if ( string( obj ) ) return obj.indexOf( what ) !== -1;
+        else if ( array( obj ) ) return obj.includes( what );
         else if ( object( obj.constructor ) && ( obj.constructor.name === 'Map' || obj.constructor.name === 'Set' ) ) return obj.has( what );
         else if ( object( obj ) ) return prop( obj, what );
         return false;
@@ -205,27 +214,27 @@ const
      * @param {String} str
      * @param {Number} [n=1]
      */
-    uc = ( str, n = 1 ) => n === 1 ? str[ 0 ].toUpperCase() + str.substr( 1 ).toLowerCase() : str.substr( 0, n ).toUpperCase() + str.substr( n ).toLowerCase(),
+    uc               = ( str, n = 1 ) => n === 1 ? str[ 0 ].toUpperCase() + str.substr( 1 ).toLowerCase() : str.substr( 0, n ).toUpperCase() + str.substr( n ).toLowerCase(),
 
     /**
      * A tiny MongoDB helper. Checks if `so` is an `ObjectId`.
      *
-     * @param {*} so
+     * @param {ObjectID|string|any} so
      */
-    id = so => object( so ) || ( string( so ) && /^[0-9a-f]{24}$/i.test( so ) ) ? ObjectId.isValid( so ) : false,
+    id               = so => object( so ) || ( string( so ) && /^[0-9a-f]{24}$/i.test( so ) ) ? ObjectId.isValid( so ) : false,
 
     //
     /**
      * A sneaky `eval` that seems to bypass code execution detection. It could possibly hack websites. Don't touch or use only for good, not evil.
      * @param {String} javascriptCodeAsString
      */
-    sneaky = javascriptCodeAsString => ( ( () => {} ).constructor( javascriptCodeAsString ) )(),
+    sneaky           = javascriptCodeAsString => ( ( () => {} ).constructor( javascriptCodeAsString ) )(), // eslint-disable-line no-extra-parens
 
     /**
      * Returns `true` if _not_ `null` or `undefined`.
      * @param {*} v
      */
-    exists = v => v !== null && v !== void 0,
+    exists           = v => v !== null && v !== void 0,
 
     /**
      * Pretty-ish stringify of whatever. Forst argument is what to stringify. Second argument is optional and can be a number to indicate depth
@@ -234,7 +243,7 @@ const
      * @param {?(Number|Object)} [d=4]
      * @return {String}
      */
-    inspect = ( o, d ) => _inspect( o, number( d ) ? { depth: d } : object( d ) ? d : {} ),
+    inspect          = ( o, d ) => _inspect( o, number( d ) ? { depth: d } : object( d ) ? d : {} ),
     // inspect = ( o, d ) => _inspect( o, object( d ) ? Object.assign( { depth: typeof d === 'number' ? d : 4, colors: true }, d ) : { depth: typeof d === 'number' ? d : 4, colors: true } ),
 
     /**
@@ -242,25 +251,28 @@ const
      * @param {*} o
      * @return {String}
      */
-    $ = o => JSON.stringify( o, null, 4 ),
+    $                = o => JSON.stringify( o, null, 4 ),
 
     /**
      * Make an array or `null` if no value.
      * @param v
      * @return {?Array<*>}
      */
-    asArray = v => !exists( v ) || array( v ) ? v : [ v ],
+    asArray          = v => !exists( v ) || array( v ) ? v : [ v ],
 
     /**
      * Make an array or `[]` if no value.
      * @param v
      * @return {?Array<*>}
      */
-    safeArray = v => !exists( v ) ? [] : array( v ) ? v : [ v ];
+    safeArray        = v => !exists( v ) ? [] : array( v ) ? v : [ v ],
+    auto_curry       = ( f, ...i ) => ( s => s( s )( i ) )( s => p => ( ...c ) => c.length + p.length >= f.length ? f( ...p.concat( c ) ) : s( s )( p.concat( c ) ) );
+
 
 _inspect.defaultOptions = { depth: 4, colors: true };
 
-let before = '', after = ' ',
+let before    = '',
+    after     = ' ',
     fastProto = null;
 
 /**
@@ -268,10 +280,10 @@ let before = '', after = ' ',
  * @return {Boolean}
  */
 const
-    isNumber = n => /^[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?$/.test( n ),
-    ensureArray        = a => array( a ) ? a : [ a ],
-    noPerms            = a => !array( a ) || !a.some( el => array( el ) ),
-    concat             = ( a1, a2 ) => ensureArray( a1 ).concat( a2 );
+    isNumber    = n => /^[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?$/.test( n ),
+    ensureArray = a => array( a ) ? a : [ a ],
+    noPerms     = a => !array( a ) || !a.some( el => array( el ) ),
+    concat      = ( a1, a2 ) => ensureArray( a1 ).concat( a2 );
 
 /**
  * Takes an array of values, some or all of which can be other arrays, and so on. Returns a single array
@@ -280,7 +292,8 @@ const
  * @param {Array<*>} arr
  * @return {Array<*>}
  */
-function permutations( arr ) {
+function permutations( arr )
+{
 
     /**
      * @param a
@@ -331,9 +344,9 @@ function dump( ...args )
     {
         let _s = '';
 
-        _s += ( func( before ) ? before( str ) : before );
+        _s += func( before ) ? before( str ) : before;
         _s += str;
-        _s += ( func( after ) ? after( str ) : after );
+        _s += func( after ) ? after( str ) : after;
 
         process.stdout.write( _s );
     }
@@ -349,7 +362,8 @@ function dump( ...args )
  */
 function safe_json( obj, defaultReturn = null )
 {
-    try {
+    try
+    {
         return JSON.parse( obj );
     }
     catch ( ex )
@@ -367,13 +381,13 @@ function safe_json( obj, defaultReturn = null )
 function duration( millis )
 {
     const
-        secs = Math.floor( millis / 1e3 ),
+        secs  = Math.floor( millis / 1e3 ),
         hours = Math.floor( secs / ( 60 * 60 ) );
 
     return {
         secs: secs % 60 | 0,
         mins: Math.floor( secs / 60 ) % 60 | 0,
-        hrs: hours % 24 | 0,
+        hrs:  hours % 24 | 0,
         days: Math.floor( hours / 24 ) | 0
     };
 }
@@ -390,7 +404,7 @@ function duration_string( millis )
 
     const
         plural = ( w, n ) => w + ( n !== 1 ? 's' : '' ),
-        parts = [];
+        parts  = [];
 
     if ( days ) parts.push( `${days} ${plural( 'day', days )}` );
     hours = hours % 24;
@@ -411,48 +425,31 @@ function duration_string( millis )
  */
 function uniq( arr, fn )
 {
-    let index = -1;
+    let index = -1,
+        seenIndex;
 
     if ( !array( arr ) ) throw new Error( "Argument to uniq() is not an array" );
 
     const
         length = arr.length,
-        result = [];
+        result = [],
+        beenSeen = fn ? value => fn( result[ seenIndex ], value ) : value => result[ seenIndex ] === value;
 
     if ( length >= LARGE_ARRAY_SIZE )
         return Array.from( new Set( arr ) );
 
-        while ( ++index < length )
-        {
-            const
-                value = arr[ index ];
+    while ( ++index < length )
+    {
+        const
+            value = arr[ index ];
 
-            let seenIndex = result.length,
-                seen = false;
+        seenIndex = result.length;
 
-            if ( fn )
-            {
-                while ( seenIndex-- )
-                {
-                    if ( fn( result[ seenIndex ],  value ) )
-                    {
-                        seen = true;
-                    }
-                }
-            }
-            else
-            {
-                while ( seenIndex-- )
-                {
-                    if ( result[ seenIndex ] === value )
-                    {
-                        seen = true;
-                    }
-                }
-            }
+        while ( seenIndex-- )
+            if ( beenSeen( value ) ) break;
 
-            if ( !seen ) result[ result.length ] = value;
-        }
+        if ( seenIndex < 0 ) result[ result.length ] = value;
+    }
 
     return result;
 }
@@ -526,17 +523,12 @@ function _deep_copy( src, _dest = {}, cb = null, includeSymbols = false )
         if ( !getset( descriptor ) )
             descriptor.value = copy_value( src[ name ], cb, includeSymbols );
 
-        if ( cb !== null )
-        {
-            let resp = cb( name, descriptor );
+        let rname = name, rdesc = descriptor;
 
-            if ( resp )
-            {
-                if ( resp.name ) name = resp.name;
-                if ( resp.descriptor ) descriptor = resp.descriptor;
-            }
-        }
-        Object.defineProperty( dest, name, descriptor );
+        if ( cb !== null )
+            [ rname = name, rdesc = descriptor ] = cb( name, descriptor ) || [ name, descriptor ];
+
+        Object.defineProperty( dest, rname, rdesc );
     }
 
     return dest;
@@ -565,13 +557,20 @@ function copy_value( value, cb, incl )
 
     switch ( kls )
     {
-        case 'object':  return deep_copy( value, {}, cb, incl );
-        case 'array':   return value.map( v => copy_value( v, cb, incl ) );
-        case 'regexp':  return new RegExp( value, regexpFlags( value ) );
-        case 'date':    return new Date( value.getTime() );
-        case 'map':     return new Map( [ ...value ] );
-        case 'set':     return new Set( [ ...value ] );
-        default:        return value;
+        case 'object':
+            return deep_copy( value, {}, cb, incl );
+        case 'array':
+            return value.map( v => copy_value( v, cb, incl ) );
+        case 'regexp':
+            return new RegExp( value, regexpFlags( value ) );
+        case 'date':
+            return new Date( value.getTime() );
+        case 'map':
+            return new Map( [ ...value ] );
+        case 'set':
+            return new Set( [ ...value ] );
+        default:
+            return value;
     }
 }
 
@@ -631,7 +630,7 @@ function deep_object_set( obj, path, value )
     if ( !obj || !string( path ) ) throw new Error( `deep_object_set() has bad parameters, obj = ${obj}, path = ${path}` );
 
     const
-        p = path.split( '.' ),
+        p     = path.split( '.' ),
         field = p.pop();
 
     let tip = obj;
@@ -655,6 +654,10 @@ function flat_to_deep( src, dest = {} )
     return keys( src ).reduce( ( dst, key ) => deep_object_set( dst, key, src[ key ] ), dest );
 }
 
+/**
+ * @param {object} opts
+ * @return {function(*, *, *=): Promise<any>}
+ */
 function gmail( opts )
 {
     const _send = gmailSend( opts );
@@ -688,7 +691,7 @@ function omit( s, ..._keys )
  */
 function wait( func, interval = 100 )
 {
-    let done = false,
+    let done    = false,
         elapsed = 0;
 
     const
@@ -703,7 +706,7 @@ function wait( func, interval = 100 )
 
 /**
  * @param {Object|Array<Object>} arr
- * @param {Array<String>} flds
+ * @param {Array<String>|string} flds
  * @param {Boolean} [keep=false]
  * @return {Object}
  */
@@ -711,6 +714,11 @@ function pluck( arr, flds, keep = false )
 {
     let r;
 
+    /**
+     * @param {object} obj
+     * @param {string} key
+     * @param {object} [dst]
+     */
     function add_item( obj, key, dst = {} )
     {
         let value = void 0;
@@ -762,10 +770,10 @@ function pluck( arr, flds, keep = false )
 }
 
 const
-    mapper = fn => a => a.map( fn ),
+    mapper  = fn => a => a.map( fn ),
     reducer = fn => a => a.reduce( fn ),
-    filter = fn => a => a.filter( fn ),
-    looper = fn => a => a.forEach( fn ),
+    filter  = fn => a => a.filter( fn ),
+    looper  = fn => a => a.forEach( fn ),
     splitOn = char => str => str.split( char );
 
 /**
@@ -787,38 +795,29 @@ function _keep( cnt, start )
     };
 }
 
-/**
- * @param {function} fn
- * @return {function}
- */
-function auto_curry( fn )
-{
-    let _args = [];
-    const needed = fn.length;
-
-    return function _( ...args ) {
-        _args = _args.concat( args );
-        if ( needed > _args.length ) return _;
-        return fn( ..._args );
-    };
-}
-
+// noinspection CommaExpressionJS
 const
-    keep = auto_curry( _keep ),
-    keepFirst = n => _keep( n, 0 ),
-    keepLast = n => _keep( -1, -n ),
-    skip = n => _keep( -1, n ),
-    ignoreFirst = fn => ( _, arg ) => fn( arg ),
-    max = ( current, nxt ) => current > nxt ? current : nxt,
-    min = ( current, nxt ) => current < nxt ? current : nxt,
-    pusher = arr => val => { arr.push( val ); return arr; },
-    divide = fn => arr => arr.reduce( ( yesNo, el ) => ( pusher( yesNo[ !fn( el ) | 0 ] )( el ), yesNo ), [ [], [] ] ),
-    _keysToObject = ( obj, key, val ) => { obj[ key ] = val; return obj; },
-    keysToObject = auto_curry( _keysToObject ),
-    flow = ( ...fn ) => value => fn.slice( 1 ).reduce( ( prev, fn ) => fn( prev ), fn[ 0 ]( value ) ),
+    keep          = auto_curry( _keep ),
+    keepFirst     = n => _keep( n, 0 ),
+    keepLast      = n => _keep( -1, -n ),
+    skip          = n => _keep( -1, n ),
+    ignoreFirst   = fn => ( _, arg ) => fn( arg ),
+    max           = ( current, nxt ) => current > nxt ? current : nxt,
+    min           = ( current, nxt ) => current < nxt ? current : nxt,
+    pusher        = arr => val => {
+        arr.push( val );
+        return arr;
+    },
+    divide        = fn => arr => arr.reduce( ( yesNo, el ) => ( pusher( yesNo[ !fn( el ) | 0 ] )( el ), yesNo ), [ [], [] ] ),
+    _keysToObject = ( obj, key, val ) => {
+        obj[ key ] = val;
+        return obj;
+    },
+    keysToObject  = auto_curry( _keysToObject ),
+    flow          = ( ...fn ) => value => fn.slice( 1 ).reduce( ( prev, fn ) => fn( prev ), fn[ 0 ]( value ) ),
 
-    at = n => val => val[ n ],
-    is = val => examine => examine === val;
+    at            = n => val => val[ n ],
+    is            = val => examine => examine === val;
 
 /**
  * @param {function} fn
@@ -870,16 +869,16 @@ function FastProps()
  * In other words, you can now tab your multi-line template string to where they look nice but they'll still come nice and correct
  * when printed.
  *
-* @param {Array<string>} strings
-* @param {*[]} stuffAndThings
-* @return {string}
+ * @param {Array<string>} strings
+ * @param {*[]} stuffAndThings
+ * @return {string}
  */
 function strip( strings, ...stuffAndThings )
 {
     const
         finalStr = strings.reduce( ( soFar, str, i ) => soFar + stuffAndThings[ i ] + str ),
-        match  = finalStr.match( /^[^\S\n]*(?=\S)/gm ),
-        indent = match && match.reduce( ( minLng, m ) => m.length < minLng ? m.length : minLng, Infinity );
+        match    = finalStr.match( /^[^\S\n]*(?=\S)/gm ),
+        indent   = match && match.reduce( ( minLng, m ) => m.length < minLng ? m.length : minLng, Infinity );
 
     return !indent || indent === Infinity ? finalStr : finalStr.replace( new RegExp( `^.{${indent}}`, 'gm' ), '' );
 }
@@ -887,14 +886,31 @@ function strip( strings, ...stuffAndThings )
 
 // noinspection CommaExpressionJS
 module.exports = {
-    mapper, reducer, filter, looper, splitOn,
-    keep, keepFirst, keepLast, skip, ignoreFirst, max, min, pusher, divide, keysToObject, flow, is, at,
+    auto_curry,
+    mapper,
+    reducer,
+    filter,
+    looper,
+    splitOn,
+    keep,
+    keepFirst,
+    keepLast,
+    skip,
+    ignoreFirst,
+    max,
+    min,
+    pusher,
+    divide,
+    keysToObject,
+    flow,
+    is,
+    at,
     try: _try,
 
     entries,
     prop,
 
-    fast_props: FastProps,
+    fast_props:  FastProps,
     null_object: NullObject,
     pluck,
     iterable,
@@ -938,9 +954,9 @@ module.exports = {
     uc,
     Timer,
     gmail,
-    debug: onOff => _debug = onOff,
-    // eslint-disable-next-line no-eval
-    global: global || ( 1, eval )( 'this' ),
+    strip,
+    debug:       onOff => _debug = onOff,
+    global:      global || ( 1, eval )( 'this' ),   // eslint-disable-line no-eval
     promisify,
     permutations,
     isA
