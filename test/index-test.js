@@ -4,14 +4,16 @@
  * @version 1.1.0
  *******************************************************************************************************/
 'use strict';
-// @formatter:off
 
-const
-    con = require( '../index' ),
-    expect = require( 'chai' ).expect;
+import con from '../index.js';
+import chai from 'chai';
+
+const { expect } = chai;
 
 describe( 'convenience', function() {
 
-    it( 'should have some tests', function() {
+    it( 'should export correctly', function() {
+        expect( con ).to.be.an( 'object' );
+        expect( typeof con.permutations ).to.equal( 'function' );
     } );
 } );
